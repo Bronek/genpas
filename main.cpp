@@ -5,11 +5,6 @@
 
 #include <gmpxx.h>
 
-static const mpz_class mpz0(0);
-static const mpz_class mpz2(2);
-static const mpz_class mpz3(3);
-static const mpz_class mpz5(5);
-
 int random_init(gmp_randstate_t& state)
 {
     gmp_randinit_default(state);
@@ -31,6 +26,11 @@ int random_init(gmp_randstate_t& state)
     return 0;
 }
 
+bool special_char(const char &a)
+{
+    return a <= ' ' || (int)a >= 127 || (int)a < 0;
+}
+
 int main(int argc, char** argv)
 {
     if (argc != 2)
@@ -45,10 +45,40 @@ int main(int argc, char** argv)
         printf("ERROR: unable to open: %s\n", argv[1]);
         return 2;
     }
+
     gmp_randstate_t state;
-    int r = random_init(state);
+    const auto r = random_init(state);
     if (r != 0)
         return r;
 
-    // etc
+    std::vector<std::string> words;
+    for (;;)
+    {
+        std::string tmp;
+        if (!std::getline(in, tmp))
+            break;
+
+        // erase special characters
+        tmp.erase(std::remove_if(tmp.begin(), tmp.end(), &special_char), tmp.end());
+        if (tmp.empty())
+            continue;
+
+        // capitalise first letter, if it's a letter
+        if (tmp[0] >= 'a' && tmp[0] <= 'z')
+            tmp[0] -= ('a' - 'A');
+        words.push_back(tmp);
+    }
+
+    if (words.empty())
+    {
+        printf("ERROR: empty wordlist: %s\n", argv[1]);
+        return 3;
+    }
+
+    for (int i = 0; i < 10; ++i)
+    {
+        const auto l = gmp_urandomm_ui(state, words.size());
+        printf("%s", words[l].c_str());
+    }
+    printf("\n");
 }
